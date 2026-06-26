@@ -152,7 +152,75 @@ class Signals:
         )
 
         return result
+    
+    def three(self, ai_response: dict):
         
+    # refernce 
+    
+    # low = 10, medium = 20, high = 33 
+    # {
+    #     "repetition_low_high": "low|medium|high",
+    #     "structure_uniformity_low_high": "low|medium|high",
+    #     "predictability_low_high": "low|medium|high"
+    # }
+        result = {
+            "score": 0.0,
+            "reason": [],
+            "reduce_first_two_signals": 0.0
+        }
+        
+        amounts = {
+            "low": 10,
+            "medium": 20,
+            "high": 33
+        }
+        # if all 3 are 'high', that'll be 99, which ends up being 0.495 in scoring. 
+        # I found this ideal, as it's not guaranteed that text is AI, but in this range it's highly likely. 
+        # This score added to the first 2 signals leaves huge impact.
+        
+        observed_signals = ai_response['observed_signals']
+        
+        repetition_low_high = observed_signals['repetition_low_high']
+        structure_uniformity_low_high = observed_signals['structure_uniformity_low_high']
+        predictability_low_high = observed_signals['predictability_low_high']
+        
+        aoc = Counter([repetition_low_high, structure_uniformity_low_high, predictability_low_high])
+        
+        most_common = aoc.most_common()
+        
+        reduction = 0
+        # reduction system. Lets say all the obverations are low,
+        # process looks like this:
+        #   3 (all 3 are lows) / 3 (3 options) * 0.5 (reducing the float) / 2 (avoid extreme changes)
+        # = -0.166
+        # (low, 2), (high, 1)
+        # score = 53 + -0.166 = 0.364
+        if len(most_common) < 3:
+            if most_common[0][0] == 'low':
+                reduction = -((most_common[0][1] / 3) * 0.5) / 2
+                
+            if most_common[0][0] == 'high':
+                reduction = ((most_common[0][1] / 3) * 0.5) / 2
+            
+            if most_common[0][0] == 'medium':
+                if len(most_common) > 1:
+                    if most_common[1][0] == "high":
+                        reduction = 0.2
+                    elif most_common[1][0] == "low":
+                        reduction = -0.15
+                else:
+                    reduction = 0.1
+                
+        result['score'] += amounts[observed_signals['repetition_low_high']]
+        result['score'] += amounts[observed_signals['structure_uniformity_low_high']]
+        result['score'] += amounts[observed_signals['predictability_low_high']]
+        
+        result['score'] = (float(result['score']) * 0.5) / 100
+        result['score'] = float(result['score'] + reduction)
+        
+        result["reason"] = f"{ai_response['vocabulary_notes']}. {ai_response['sentence_structure_notes']}. {ai_response['stylistic_notes']}"
+    
+        return result
     
 if __name__ in "__main__":
     signal = Signals()
