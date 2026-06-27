@@ -148,7 +148,7 @@ class Signals:
     
         normalized = 1 / (1 + variance)
 
-        result["score"] = float(normalized) * 10
+        result["score"] = float(normalized)
 
         # Reasoning
         result["reasons"].append(
@@ -173,9 +173,9 @@ class Signals:
         }
         
         amounts = {
-            "low": 10,
-            "medium": 20,
-            "high": 33
+            "low": 0.2,
+            "medium": 0.5,
+            "high": 0.8
         }
         # if all 3 are 'high', that'll be 99, which ends up being 0.495 in scoring. 
         # I found this ideal, as it's not guaranteed that text is AI, but in this range it's highly likely. 

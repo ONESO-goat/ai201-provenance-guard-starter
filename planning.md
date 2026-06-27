@@ -139,7 +139,7 @@ The interface will display one of three labels.
 
 ```python
 {
-    "origin": "ai",
+    "origin": "liekly_ai",
     "confidence": 0.82,
     "reason": "The submitted text contains multiple characteristics commonly associated with AI-generated writing."
 }
@@ -154,7 +154,7 @@ The interface will display one of three labels.
 
 ```python
 {
-    "origin": "human",
+    "origin": "liekly_human",
     "confidence": 0.18,
     "reason": "The submitted text shows characteristics that are commonly found in human writing."
 }
@@ -168,7 +168,7 @@ The interface will display one of three labels.
 
 ```python
 {
-    "origin": "uncertain",
+    "origin": "likely_uncertain",
     "confidence": 0.56,
     "reason": "The available evidence is mixed. This submission should not be classified automatically."
 }
@@ -214,6 +214,7 @@ Each appeal should display:
 * Confidence score
 * Signal 1 score
 * Signal 2 score
+* Signal 3 score
 * Original label
 * User explanation
 * Current status
@@ -268,6 +269,69 @@ Reason:
     structured Medium-style essays → may look AI-like
 ---
 
+# Rate Limiting
+
+To prevent abuse and ensure fair usage of the publishing system, this application implements rate limiting using Flask-Limiter.
+
+## Implementation
+
+Rate limiting is applied directly to the /publish endpoint using the following configuration:
+
+```python
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=[],
+    storage_uri="memory://",
+)
+
+@app.route("/publish", methods=["POST"])
+@limiter.limit("2 per minute;25 per day")
+def publish():
+...
+```
+## Limits
+* 2 requests per minute per IP address
+* 25 requests per day per IP address
+
+These limits are designed to:
+
+- Prevent spam publishing
+- Reduce server load from repeated automated requests
+- Encourage realistic user behavior patterns
+- Rate Limit Behavior
+
+When a user exceeds the allowed request limits, Flask-Limiter automatically blocks the request and triggers a 429 Too Many Requests error.
+
+## Custom error handling
+A custom error handler is used to return a consistent JSON response:
+
+```python
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    return jsonify({
+        "error": "Rate limit exceeded. Try again later."
+    }), 429
+```
+
+Example Response (Rate Limit Exceeded)
+
+```python
+{
+  "error": "Rate limit exceeded. Try again later."
+}
+```
+
+### Why This Matters
+
+This system ensures:
+
+- Fair usage across all users
+- Protection against automated spam or abuse
+- Stable performance under high traffic conditions
+
+---
+
 # Architecture
 
 ## System Diagram
@@ -282,7 +346,7 @@ Reason:
                  | Flask Web Server  |
                  +---------+---------+
                            |
-          +----------------+----------------+
+          +----------------+----------------+ 
           |                                 |
           v                                 v
 +----------------------+        +----------------------+
@@ -291,6 +355,14 @@ Reason:
 +----------+-----------+        +----------+-----------+
            |                               |
            +---------------+---------------+
+                           |
+                           |
+                           v
+                +----------------------+
+                |  Signal 3 Anqalyzer  |
+                |    Agent overview    |
+                +----------+-----------+
+                           |
                            |
                            v
                 +----------------------+
@@ -338,10 +410,13 @@ If the user disagrees with the result, they can submit an appeal. The system sto
 
 Generate:
 
-* Flask application skeleton
-* `/submit` endpoint
 * Signal 1 function
 * JSON response containing Signal 1 score
+
+```python
+def one(self, text):
+    ...
+```
 
 ### Verification
 
@@ -380,6 +455,34 @@ Test with:
 * mixed writing
 
 Confirm confidence scores vary meaningfully and map to the correct label category.
+
+
+
+## Milestone 4.5 — third Signal
+
+### Spec sections provided
+
+* Agent overview
+* low/medium/high range (instead of numbering to avoid the agent to provide a direct score)
+* Architecture diagram
+
+### AI request
+
+Generate:
+
+* agent overview
+* Signal 3 function
+* confidence score calculation
+* classification logic
+* final score created
+
+### Verification
+
+Test with:
+
+* fake AI response
+* mixed ranges of lows/mediums/ and highs
+
 
 ---
 
@@ -420,8 +523,8 @@ Final labels are:
 ### Likely AI-Generated
 
 ```
-Likely AI-Generated
-Confidence: XX%
+likely_ai
+Confidence: X.XXX
 
 The submitted text contains multiple characteristics commonly associated with AI-generated writing.
 ```
@@ -429,7 +532,7 @@ The submitted text contains multiple characteristics commonly associated with AI
 ### Uncertain Result
 
 ```
-Uncertain Result
+uncertain
 Confidence: XX%
 
 The available evidence is mixed. This submission should not be classified automatically.
@@ -438,7 +541,7 @@ The available evidence is mixed. This submission should not be classified automa
 ### Likely Human-Written
 
 ```
-Likely Human-Written
+likely_human
 Confidence: XX%
 
 The submitted text shows characteristics that are commonly found in human writing.

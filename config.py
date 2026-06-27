@@ -73,7 +73,7 @@ def save_user(data):
     with open(Config.USERS, 'w') as file:
         json.dump(users, file, indent=4)
         
-def get_stories():
+def get_stories_json():
     with open(Config.STORIES, 'r') as file:
         return json.load(file)
 
@@ -92,7 +92,7 @@ def get_story_by_id(Id:str)->tuple[dict, bool]:
     return {}, False
                 
 def add_story(dt):
-    stories = get_stories()
+    stories = get_stories_json()
     stories.append(dt)
     with open(Config.STORIES, 'w') as file:
         json.dump(stories, file, indent=4)

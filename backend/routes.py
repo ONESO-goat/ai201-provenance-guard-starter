@@ -1,17 +1,37 @@
 from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 from flask_login import current_user, login_required
-from config import Config, save_appeal, get_appeals, add_appeal, get_story_by_id, get_users, save_user, get_user, get_user_by_id, add_story # should be making this a class
+from config import Config, save_appeal, get_appeals, add_appeal, get_story_by_id, get_users, save_user, get_user, get_user_by_id, add_story, get_stories_json
 from datetime import datetime, timezone
 import uuid
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from guard import analyze
 import random
 
 app = Flask(__name__)
+app.secret_key = "ai201"
 
-CORS(app)
+CORS(
+    app,
+    origins=["http://127.0.0.1:5500"],
+    supports_credentials=True
+)
 
-app.route("/signup", options=["POST"])
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=[],
+    storage_uri="memory://",
+)
+
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    return jsonify({
+        "error": "Rate limit exceeded. Try again later."
+    }), 429
+
+@app.route("/signup", methods=["POST"])
 def make_account():
     data = request.get_json()
     if not data:
@@ -28,14 +48,15 @@ def make_account():
     save_user({
         "id": Id,
         "username": username,
-        "joined": datetime.now(tz=timezone.utc),
+        "joined": datetime.now(tz=timezone.utc).isoformat(),
         "stories": []
     })
     session['user_id'] = Id
     return jsonify({"message": f"User '{username}' created"}), 201
 
-app.route("/login", options=["POST"])
+@app.route("/login", methods=["POST"])
 def login():
+    print("SESSION AFTER LOGIN:", dict(session))
     data = request.get_json()
     if not data:
         return jsonify({"error": "Data was not found during login process"}), 400
@@ -47,19 +68,44 @@ def login():
     user, exist = get_user(username)
     if not exist:
         return jsonify({"error": "User not found in database"}), 404
+    session['user_id'] = user['id']
     return jsonify({"message": f"{username} logged in, welcome back!", "user": user}), 200
     
     
+@app.route("/all-stories", methods=["GET"])
+def get_all_stories():
+    return jsonify({"stories": get_stories()}), 200
     
     
     
-app.route("/all-stories", options=["GET"])
+@app.route("/verify", methods=["POST"])
+def verify():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "User id not found in session"}), 401
+    user, exist = get_user(user_id)
+    if not exist:
+        return jsonify({"error": "User not found"}), 404
+    user['verified'] = True
+    return jsonify({"message": f"{user['username']} is now verified"}), 200
+    
+    
+@app.route("/user-stories", methods=["GET"])
 def get_stories():
-    return jsonify({"message": "success", "stories": get_stories()}), 200
+    
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({"error": "Not logged in"}), 401
+    
+    stories = get_stories_json()
+    filtered = [s for s in stories if s.get("creator_id") == user_id]
+    return jsonify({"message": "success", "stories":filtered}), 200
    
     
-app.route("/publish", options=["POST"])
+@app.route("/publish", methods=["POST"])
+@limiter.limit("2 per minute;25 per day")
 def publish():
+    print("SESSION AFTER PUBLISH:", dict(session))
     data = request.get_json()
     if not data:
         return jsonify({"error":"Data was not found during publish process"}), 404
@@ -76,13 +122,6 @@ def publish():
     if not results:
         return jsonify({"error": "Error occurred during story publishing"}), 500
     
-#      "content_id": "3f7a2b1e-...",
-#   "creator_id": "test-user-1",
-#   "timestamp": "2025-04-01T14:32:10.123Z",
-#   "attribution": "likely_ai",
-#   "confidence": 0.78,
-#   "llm_score": 0.81,
-#   "status": "classified"
     tags = []
     if results['origin'] == "likely_ai":
         tags.append("ai generate content")
@@ -90,8 +129,8 @@ def publish():
         "id": str(uuid.uuid4()),
         "content": text,
         "creator": user['username'],
-        "crator_id": user['id'],
-        "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+        "creator_id": user['id'],
+        "publish_date": datetime.now(tz=timezone.utc).isoformat(),
         "attribution": results['origin'],
         "confidence": results['score'],
         "status": "classified",
@@ -104,7 +143,8 @@ def publish():
     
     
     
-app.route("/appeal", options=["POST"])
+@app.route("/appeal", methods=["POST"])
+@limiter.limit("10 per minute;100 per day") 
 def submit_appeal():
     data = request.get_json()
     if not data:
@@ -117,7 +157,7 @@ def submit_appeal():
     if not story_id:
         return jsonify({"error": "Story id was not provided"}), 404
     if not details:
-        details = "No details provided by the user"
+        details = "The user believes the 'AI' mark is incorrect and wants further verification."
         
     story, exist = get_story_by_id(story_id)
     if not exist:
