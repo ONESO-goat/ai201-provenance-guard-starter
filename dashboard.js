@@ -1,5 +1,43 @@
 const API = "http://127.0.0.1:3000";
 
+function isVerified(vef){
+    const butt = document.getElementById("verifyDiv");
+    if (!butt){return false}
+    if (vef === undefined || ![true, false].includes(vef)){
+        alert("Verification button is undefined");
+        butt.innerHTML = `<button id="verifyButton">verify</button>`
+        return false;
+    }
+
+    if (vef === false){
+        butt.innerHTML = `<button id="verifyButton">verify</button>`
+        return false;
+    }
+   
+    butt.innerHTML = `<div style="background-color: blue;"id="verifyButton">verified ✅, click to unverify</div>`
+    return true;
+}
+
+async function me(){
+    try{
+        const res = await fetch(`${API}/me`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        credentials: "include"
+    }
+    )
+    const data = await res.json();
+    const user = data['user'];
+    isVerified(user.verified)
+    return true
+
+    } catch (err) {
+        console.error(err);
+        return false
+    }
+}
 async function loadStories() {
   try {
     const res = await fetch(`${API}/user-stories`, {
@@ -45,7 +83,20 @@ async function loadStories() {
 }
 
 async function verifyUser(){
+    try{
 
+        const res = await fetch(`${API}/verify`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        credentials: "include",
+    })
+    const data = await res.json();
+    isVerified(data.status);
+    } catch (err){
+        console.error(err)
+    }
 }
 async function publishStory() {
   const text = document.getElementById("storyText").value;
@@ -102,5 +153,12 @@ async function appeal(storyId) {
   }
 }
 document.addEventListener("DOMContentLoaded",()=>{
+    const verifyButton = document.getElementById("verifyButton")
+    me();
     loadStories();
+    if (verifyButton){
+        verifyButton.addEventListener("click", ()=>{
+            verifyUser();
+        })
+    }
 })

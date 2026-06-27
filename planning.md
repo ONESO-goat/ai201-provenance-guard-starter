@@ -514,6 +514,40 @@ Confirm:
 
 ---
 
+# Verification
+
+For users to avoid obtaining a false allgeation on their work, they can call the "/verify" route to become a trusted member
+
+## purpose
+
+* gain trust from other users
+* extra confirmation and protective on their work
+
+
+## Route
+
+I created a POST flask route using the url "/verify" to keep things simple.
+
+```python
+@app.route("/verify", methods=["POST"])
+def verify():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "User id not found in session"}), 401
+    user, exist = get_user(user_id)
+    if not exist:
+        return jsonify({"error": "User not found"}), 404
+    
+    if user['verified']:  user['verified'] = True
+    else: user['verified'] = False
+    
+    return jsonify({"message": f"{user['username']} is now verified", "status": user['verified']}), 200
+
+
+```
+
+---
+
 # Final Label Review
 
 The label wording has been reviewed for clarity.

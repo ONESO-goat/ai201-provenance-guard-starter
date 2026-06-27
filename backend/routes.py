@@ -30,6 +30,62 @@ def ratelimit_handler(e):
     return jsonify({
         "error": "Rate limit exceeded. Try again later."
     }), 429
+    
+@app.route("/dashboard", methods=["GET"])
+def dashboard():
+    stories = get_all_stories()  # assumes you already have this from add_story storage
+
+    if not stories:
+        return jsonify({
+            "total_submissions": 0,
+            "ai_count": 0,
+            "human_count": 0,
+            "uncertain_count": 0,
+            "ai_ratio": 0,
+            "human_ratio": 0,
+            "average_confidence": 0,
+            "appeal_rate": 0
+        })
+
+    total = len(stories)
+
+    ai_count = sum(1 for s in stories if s.get("attribution") == "likely_ai")
+    human_count = sum(1 for s in stories if s.get("attribution") == "likely_human")
+    uncertain_count = sum(1 for s in stories if s.get("attribution") == "uncertain")
+
+    avg_confidence = sum(s.get("confidence", 0) for s in stories) / total
+
+    appeals = [s for s in stories if s.get("appeal_id") is not None]
+    appeal_rate = len(appeals) / total if total > 0 else 0
+
+    return jsonify({
+        "total_submissions": total,
+
+        "distribution": {
+            "likely_ai": ai_count,
+            "likely_human": human_count,
+            "uncertain": uncertain_count
+        },
+
+        "ratios": {
+            "ai_ratio": ai_count / total,
+            "human_ratio": human_count / total,
+            "uncertain_ratio": uncertain_count / total
+        },
+
+        "average_confidence": round(avg_confidence, 4),
+        "appeal_rate": round(appeal_rate, 4)
+    })
+
+@app.route("/me", methods=['GET'])
+def me():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "User id not found in session"}), 401
+    user, exist = get_user(user_id)
+    if not exist:
+        return jsonify({"error": "User not found"}), 404
+    return jsonify({"message": "success", "user": user}), 200
 
 @app.route("/signup", methods=["POST"])
 def make_account():
@@ -47,6 +103,7 @@ def make_account():
     Id = str(uuid.uuid4())
     save_user({
         "id": Id,
+        "verified": False,
         "username": username,
         "joined": datetime.now(tz=timezone.utc).isoformat(),
         "stories": []
@@ -86,8 +143,11 @@ def verify():
     user, exist = get_user(user_id)
     if not exist:
         return jsonify({"error": "User not found"}), 404
-    user['verified'] = True
-    return jsonify({"message": f"{user['username']} is now verified"}), 200
+    
+    if user['verified']:  user['verified'] = True
+    else: user['verified'] = False
+    
+    return jsonify({"message": f"{user['username']} is now verified", "status": user['verified']}), 200
     
     
 @app.route("/user-stories", methods=["GET"])
@@ -123,8 +183,11 @@ def publish():
         return jsonify({"error": "Error occurred during story publishing"}), 500
     
     tags = []
-    if results['origin'] == "likely_ai":
-        tags.append("ai generate content")
+    if results['origin'] == "likely_ai" and not user['verified']:
+        tags.append("ai generated content")
+    if user['verified']:
+        tags.append("this content is authenticated")
+        
     dt = {
         "id": str(uuid.uuid4()),
         "content": text,
