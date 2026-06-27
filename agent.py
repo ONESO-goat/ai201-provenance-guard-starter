@@ -1,5 +1,6 @@
 from config import Config
 import ollama
+import re
 from groq import Groq
 from logs.prompts import Prompts
 import json
@@ -27,10 +28,12 @@ class Agent:
             self.ai = Groq(api_key=api_key)
         
         self.llm_model = llm_model
+        self.prompts = Prompts()
         
     def generate(self, user_text):
+        
         m = [
-            {"role": "system", "content": Prompts.determine_ai_or_human},
+            {"role": "system", "content": self.prompts.determine_ai_or_human},
             {"role": "user", "content": f"<<<TEXT>>>\n{user_text}\n<<<TEXT>>>"}
         ]
         if self.backend == 'grok':
@@ -38,6 +41,7 @@ class Agent:
                 response = self.ai.chat.completions.create(
                 model=self.llm_model,
                 messages=m,
+                response_format={"type": "json_object"}
                 
             )
 
@@ -46,7 +50,7 @@ class Agent:
                 if answer:
                     try:
                         data = json.loads(answer)
-                    except json.JSONDecodeError as ex:
+                    except Exception as ex:
                         return {
     "vocabulary_notes": "",
     "sentence_structure_notes": "",
@@ -56,11 +60,13 @@ class Agent:
         "structure_uniformity_low_high": "low|medium|high",
         "predictability_low_high": "low|medium|high"
     },
-    "error": f"Parsing failed: {ex}",
+    "error": f"Parsing failed: \n\t\u2022{ex} ",
+    "reponse": answer,
+    
     "failed": True
 }
                 
-                    parsed_answer = self.parse_observed_signals(data)
+                    parsed_answer = self.safe_parse_llm_json(data)
                     return parsed_answer
                 
                 print("No answer generated.")
@@ -129,7 +135,7 @@ class Agent:
     "error": f"Parsing failed: {ex}",
     "failed": True
 }
-                parsed_content = self.parse_observed_signals(content)
+                parsed_content = self.safe_parse_llm_json(content)
                 return parsed_content
 
             except Exception as ex:
@@ -155,51 +161,31 @@ class Agent:
         txt += "=========================================\n"
         return txt
     
-    def parse_observed_signals(self, data: dict):
-        """
-        Converts LLM observed_signals into numeric values usable by your scoring system.
-        """
+    def safe_parse_llm_json(self, text):
+        if not text or not isinstance(text, str):
+            return text
+
+        text = text.strip()
+
+        # remove markdown code blocks if present
+        text = re.sub(r"```json", "", text)
+        text = re.sub(r"```", "", text)
+
+        # try direct parse first
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            pass
+
+        # fallback: extract first JSON object
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if match:
+            return json.loads(match.group())
+
+        raise ValueError(f"Could not parse JSON: {text[:200]}")
         
-        self.mapping = {
-            "low": 0.2,
-            "medium": 0.5,
-            "high": 0.8
-        }
-
-        result = {
-            "repetition": 0.0,
-            "structure_uniformity": 0.0,
-            "predictability": 0.0,
-            "notes": {}
-        }
-
-        if not isinstance(data, dict):
-            return result
-
-        signals = data.get("observed_signals", {})
-
-        if not isinstance(signals, dict):
-            return result
-
-        # Repetition
-        rep = signals.get("repetition_low_high", "low")
-        result["repetition"] = self.mapping.get(rep, 0.2)
-        result["notes"]["repetition"] = rep
-
-        # Structure uniformity
-        struct = signals.get("structure_uniformity_low_high", "low")
-        result["structure_uniformity"] = self.mapping.get(struct, 0.2)
-        result["notes"]["structure"] = struct
-
-        # Predictability
-        pred = signals.get("predictability_low_high", "low")
-        result["predictability"] = self.mapping.get(pred, 0.2)
-        result["notes"]["predictability"] = pred
-
-        return result
-    
-    
-    
+        
+        
 if __name__ == "__main__":
     agent = Agent()
     test = """

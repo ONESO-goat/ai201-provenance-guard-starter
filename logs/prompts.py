@@ -99,11 +99,11 @@ Return ONLY valid JSON:
     "vocabulary_notes": "",
     "sentence_structure_notes": "",
     "stylistic_notes": "",
-    "observed_signals": {
+    "observed_signals": {{
         "repetition_low_high": "low|medium|high",
         "structure_uniformity_low_high": "low|medium|high",
         "predictability_low_high": "low|medium|high"
-    }
+    }}
 }}
 
 Rules:

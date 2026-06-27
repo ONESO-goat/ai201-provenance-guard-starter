@@ -445,3 +445,14 @@ The submitted text shows characteristics that are commonly found in human writin
 ```
 
 These labels clearly communicate the result while emphasizing that the detector provides an estimate rather than absolute certainty.
+
+
+# Results
+
+SEQUENCE SCORES: 
+        - signal 1 0.6470852017937218 
+        - signal 2 0.025781354795439294 
+        - OVERALL 0.33643327829458053 
+        - AI -0.1
+
+FINAL SCORE: 0.23643327829458052

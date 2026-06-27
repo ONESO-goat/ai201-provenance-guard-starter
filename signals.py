@@ -4,11 +4,13 @@ from config import Config
 
 class Signals:
     def __init__(self):
-        pass
+        self.debugging_counter = 1
     
     def sequence(self, text):
         result = {
             "score": 0.0,
+            "signal1_score": 0.0,
+            "signal2_score": 0.0,
             "reasons": {}
         }
         signal1 = self.one(text)
@@ -21,6 +23,8 @@ class Signals:
         
         overall_score = (signal1['score'] * 0.5) + (signal2['score'] * 0.5)
         result['score'] = overall_score
+        result['signal1_score'] = signal1['score']
+        result['signal2_score'] = signal2['score']
         return result
         
     def breakdown_text(self, text: str):
@@ -144,7 +148,7 @@ class Signals:
     
         normalized = 1 / (1 + variance)
 
-        result["score"] = float(normalized)
+        result["score"] = float(normalized) * 10
 
         # Reasoning
         result["reasons"].append(
@@ -166,7 +170,6 @@ class Signals:
         result = {
             "score": 0.0,
             "reason": [],
-            "reduce_first_two_signals": 0.0
         }
         
         amounts = {
@@ -210,18 +213,24 @@ class Signals:
                         reduction = -0.15
                 else:
                     reduction = 0.1
-                
-        result['score'] += amounts[observed_signals['repetition_low_high']]
-        result['score'] += amounts[observed_signals['structure_uniformity_low_high']]
-        result['score'] += amounts[observed_signals['predictability_low_high']]
-        
+        print(f"FINAL REDUCTION: {reduction}")
+        result['score'] += amounts[repetition_low_high]
+        self._debug_scores(result['score'])
+        result['score'] += amounts[structure_uniformity_low_high]
+        self._debug_scores(result['score'])
+        result['score'] += amounts[predictability_low_high]
+        self._debug_scores(result['score'])
         result['score'] = (float(result['score']) * 0.5) / 100
+        self._debug_scores(result['score'])
         result['score'] = float(result['score'] + reduction)
-        
+        self._debug_scores(result['score'])
         result["reason"] = f"{ai_response['vocabulary_notes']}. {ai_response['sentence_structure_notes']}. {ai_response['stylistic_notes']}"
     
         return result
     
+    def _debug_scores(self,score):
+        print(f"[DBUG {self.debugging_counter}] SCORE: \u2022{score}\n")
+        self.debugging_counter += 1
 if __name__ in "__main__":
     signal = Signals()
     
@@ -417,6 +426,21 @@ My daughter was stolen.
 And I still haven’t found the heart to tell her.""".strip() # r/stores, scores 0.71 for signal.one()
 
 # FLAW: I believe for signal.one(), the longer the story or text, the higher the score is for part 1 which means the longer -> the more likely it's seen as "AI" which is flawed in most context. BUT r/stories can be filled with fake stories
-    print(signal.sequence(test7))
+    result = signal.sequence(test8)
     # counts = signal.one(test)
     # print(counts)
+    
+    
+    ai_response_test = {'vocabulary_notes': "The text features a diverse vocabulary with descriptive phrases, such as 'deep shade of twilight', 'crisp autumn breeze', and 'warm glow of an antiquarian bookshop'. There is a notable absence of repetitive words or phrases.", 
+                        'sentence_structure_notes': 'The sentence structure is varied, with a mix of short and long sentences that create a sense of rhythm and flow. The use of descriptive passages and dialogue adds to the dynamic nature of the structure.', 
+                        'stylistic_notes': "The text is rich in stylistic features, including personal experience, specificity, and detailed phrasing. The author's use of sensory details, such as the 'scent of old paper and roasted coffee beans', creates a vivid and immersive atmosphere.", 
+                        'observed_signals': {'repetition_low_high': 'low', 
+                                             'structure_uniformity_low_high': 'high', 
+                                             'predictability_low_high': 'high'}}
+    
+    ai_response = signal.three(ai_response=ai_response_test)
+    print(ai_response)
+    
+    print(f"\nSEQUENCE SCORES: \n\t- signal 1 {result['signal1_score']} \n\t- signal 2 {result['signal2_score']} \n\t- OVERALL {result['score']} \n\t- AI {ai_response['score']}")
+    fs = float(min(result['score'] + ai_response['score'], 1.0))
+    print(f"\nFINAL SCORE: {fs}")
