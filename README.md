@@ -1,4 +1,4 @@
-# AI Text Detection System
+# Provenance Guard
 
 ## Overview
 
@@ -50,7 +50,7 @@ AI-generated text often repeats vocabulary more consistently than human writing.
 
 ### Limitation
 
-Creative writing, poetry, and speeches intentionally reuse phrases and may appear more AI-like.
+Creative writing, long text, poetry, and speeches intentionally reuse phrases and may appear more AI-like.
 
 ---
 
@@ -69,7 +69,7 @@ Human writing usually varies naturally between short and long sentences, while A
 
 ### Limitation
 
-Technical documentation and instructional writing frequently use uniform sentence structures despite being written by humans.
+Technical documentation and instructional writing frequently use uniform sentence structures despite being written by humans. I am not certain if the implemation is accurate to everyday systems.
 
 ---
 
@@ -111,7 +111,11 @@ Confidence always ranges from:
 0.0 → Likely Human
 1.0 → Likely AI
 ```
+### Flaw
 
+Scoring seems to fall around the same range as the agent chooses 'low' majority of the time. 
+AI generated content, even if obvious, will likely pass without worry.
+cd a
 ---
 
 # Classification Thresholds

@@ -65,8 +65,16 @@ def get_user_by_id(Id:str)->tuple[dict, bool]:
             
 
 def save_user(data):
-    users = get_users()
-    users.append(data)
+    users: list = get_users()
+    found = False
+    for index, user in enumerate(users):
+        if user['username'] == data['username']:
+            users[index] = data
+            found = True
+            break
+            
+    if not found:
+        return
     with open(Config.USERS, 'w') as file:
         json.dump(users, file, indent=4)
         

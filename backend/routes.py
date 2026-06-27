@@ -93,9 +93,9 @@ def me():
     user_id = session.get("user_id")
     if not user_id:
         return jsonify({"error": "User id not found in session"}), 401
-    user, exist = get_user(user_id)
+    user, exist = get_user_by_id(user_id)
     if not exist:
-        return jsonify({"error": "User not found"}), 404
+        return jsonify({"error": f"User not found {user_id}"}), 404
     return jsonify({"message": "success", "user": user}), 200
 
 @app.route("/signup", methods=["POST"])
@@ -160,7 +160,7 @@ def verify():
     if not user_id:
         return jsonify({"error": "User id not found in session"}), 401
     
-    user, exist = get_user(user_id)
+    user, exist = get_user_by_id(user_id)
     if not exist:
         return jsonify({"error": "User not found"}), 404
     
@@ -174,7 +174,7 @@ def verify():
         "id": user['id'],
         "user": user['username'],
         "status": True,
-        "timestamp": datetime.now(tz=timezone.utc)
+        "timestamp": datetime.now(tz=timezone.utc).isoformat()
     })
     return jsonify({"message": f"{user['username']} is now verified", "verified": True}), 200
     

@@ -1,21 +1,33 @@
 const API = "http://127.0.0.1:3000";
 
-function isVerified(vef){
-    const butt = document.getElementById("verifyDiv");
-    if (!butt){return false}
-    if (vef === undefined || ![true, false].includes(vef)){
-        alert("Verification button is undefined");
-        butt.innerHTML = `<button id="verifyButton">verify</button>`
+function isVerified(vef) {
+    const container = document.getElementById("verifyDiv");
+    if (!container) return false;
+
+    if (typeof vef !== "boolean") {
+        container.innerHTML = `
+            <button id="verifyButton">verify</button>
+        `;
+        console.warn("Verification value is invalid or undefined");
         return false;
     }
 
-    if (vef === false){
-        butt.innerHTML = `<button id="verifyButton">verify</button>`
-        return false;
+    container.innerHTML = "";
+    console.log(`IS VERIFIED: ${vef}`);
+    if (vef === true) {
+        container.innerHTML = `
+            <div id="verifyButton" style="background-color: blue;">
+                verified ✅
+            </div>
+        `;
+        return true;
     }
-   
-    butt.innerHTML = `<div style="background-color: blue;"id="verifyButton">verified ✅, click to unverify</div>`
-    return true;
+
+
+    container.innerHTML = `
+       <button id="verifyButton">verify</button>
+    `;
+    return false;
 }
 
 async function me(){
@@ -29,8 +41,13 @@ async function me(){
     }
     )
     const data = await res.json();
-    const user = data['user'];
-    isVerified(user.verified)
+    if (data['error']){
+      console.error(`error occured while grabbing user data: ${data['error']}`);
+      return
+    }
+    const user = await data['user'];
+    console.log(data);
+    isVerified(user.verified);
     return true
 
     } catch (err) {
@@ -152,13 +169,17 @@ async function appeal(storyId) {
     console.error("Appeal failed:", err);
   }
 }
-document.addEventListener("DOMContentLoaded",()=>{
-    const verifyButton = document.getElementById("verifyButton")
-    me();
+document.addEventListener("DOMContentLoaded",async ()=>{
+   
+    
+    await me();
+    const verifyButton = document.getElementById("verifyButton");
+    console.log(`VERIFICATION BUTTON: ${verifyButton.innerHTML}`);
     loadStories();
     if (verifyButton){
         verifyButton.addEventListener("click", ()=>{
             verifyUser();
         })
+
     }
 })
