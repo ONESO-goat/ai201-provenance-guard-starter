@@ -1,7 +1,18 @@
 from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 from flask_login import current_user, login_required
-from config import Config, save_appeal, get_appeals, add_appeal, get_story_by_id, get_users, save_user, get_user, get_user_by_id, add_story, get_stories_json
+from config import (Config, 
+                    add_appeal, 
+                    get_story_by_id,
+                    get_users, 
+                    save_user,
+                    get_user, 
+                    get_user_by_id,
+                    add_story, 
+                    get_stories_json,
+                    add_to_audit_log
+                    )  # should make this into a class to save my sanity
+
 from datetime import datetime, timezone
 import uuid
 from flask_limiter import Limiter
@@ -101,14 +112,22 @@ def make_account():
         if user['username'] == username:
             return jsonify({"error": f"The username '({username})' already being used"}), 403
     Id = str(uuid.uuid4())
+    date = datetime.now(tz=timezone.utc).isoformat()
     save_user({
         "id": Id,
         "verified": False,
         "username": username,
-        "joined": datetime.now(tz=timezone.utc).isoformat(),
+        "joined": date,
         "stories": []
     })
     session['user_id'] = Id
+    
+    add_to_audit_log({
+        "event": "new_user",
+        "id": Id,
+        "user": username,
+        "timestamp": date
+    })
     return jsonify({"message": f"User '{username}' created"}), 201
 
 @app.route("/login", methods=["POST"])
@@ -143,11 +162,19 @@ def verify():
     user, exist = get_user(user_id)
     if not exist:
         return jsonify({"error": "User not found"}), 404
+    if user['verified']:
+        return jsonify({"message": f"{user['username']} is already verified", "verified": True}), 200
     
-    if user['verified']:  user['verified'] = True
-    else: user['verified'] = False
-    
-    return jsonify({"message": f"{user['username']} is now verified", "status": user['verified']}), 200
+    user['verified'] = True
+    save_user(user)
+    add_to_audit_log({
+        "event": "user_verified_toggle",
+        "id": user['id'],
+        "user": user['username'],
+        "status": True,
+        "timestamp": datetime.now(tz=timezone.utc)
+    })
+    return jsonify({"message": f"{user['username']} is now verified", "verified": True}), 200
     
     
 @app.route("/user-stories", methods=["GET"])
@@ -188,12 +215,14 @@ def publish():
     if user['verified']:
         tags.append("this content is authenticated")
         
+    Id = str(uuid.uuid4())
+    date = datetime.now(tz=timezone.utc).isoformat()
     dt = {
-        "id": str(uuid.uuid4()),
+        "id": Id,
         "content": text,
         "creator": user['username'],
         "creator_id": user['id'],
-        "publish_date": datetime.now(tz=timezone.utc).isoformat(),
+        "publish_date": date,
         "attribution": results['origin'],
         "confidence": results['score'],
         "status": "classified",
@@ -202,6 +231,14 @@ def publish():
     user['stories'].append(dt)
     save_user(user)
     add_story(dt)
+    add_to_audit_log({
+        "event": "story_published",
+        "user": user['username'],
+        "story_id": Id,
+        "attribution": results['origin'],
+        "confidence":results['score'],
+        "timestamp": date
+    })
     return jsonify({"message": f"{user['username']} published new story"}), 201
     
     
@@ -231,6 +268,10 @@ def submit_appeal():
     story['details'] = details.lower().strip()
     
     add_appeal(story)
+    
+    # save appeal event without adding 'event' to appeal itself
+    story['event'] = "appeal_submitted"
+    add_to_audit_log(story)
     return jsonify({"message": f"Appeal created by the user '{story['creator']}'", "appeal": story})
 
     

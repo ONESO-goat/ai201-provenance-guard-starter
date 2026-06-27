@@ -139,7 +139,7 @@ The interface will display one of three labels.
 
 ```python
 {
-    "origin": "liekly_ai",
+    "origin": "likely_ai",
     "confidence": 0.82,
     "reason": "The submitted text contains multiple characteristics commonly associated with AI-generated writing."
 }
@@ -154,7 +154,7 @@ The interface will display one of three labels.
 
 ```python
 {
-    "origin": "liekly_human",
+    "origin": "likely_human",
     "confidence": 0.18,
     "reason": "The submitted text shows characteristics that are commonly found in human writing."
 }
@@ -168,7 +168,7 @@ The interface will display one of three labels.
 
 ```python
 {
-    "origin": "likely_uncertain",
+    "origin": "uncertain",
     "confidence": 0.56,
     "reason": "The available evidence is mixed. This submission should not be classified automatically."
 }
@@ -414,7 +414,7 @@ Generate:
 * JSON response containing Signal 1 score
 
 ```python
-def one(self, text):
+def one(self, text:str):
     ...
 ```
 
@@ -446,6 +446,10 @@ Generate:
 * confidence score calculation
 * classification logic
 
+```python
+def two(self, text:str):
+    ...
+```
 ### Verification
 
 Test with:
@@ -476,6 +480,10 @@ Generate:
 * classification logic
 * final score created
 
+```python
+def three(self, text:str)
+```
+
 ### Verification
 
 Test with:
@@ -488,6 +496,12 @@ Test with:
 
 ## Milestone 5 — Production Layer
 
+### loop
+1. signup/login
+2. create story
+3. publish
+4. appeal if things are incorrect, or verify your account to avoid false allegations 
+
 ### Spec sections provided
 
 * Transparency Labels
@@ -499,9 +513,50 @@ Test with:
 Generate:
 
 * label generation logic
+* `/publish` endpoint
+* story storage
+* story status management
+
+
+### User request
+Generate:
+
 * `/appeal` endpoint
 * appeal storage
 * appeal status management
+
+```python
+@app.route("/appeal", methods=["POST"])
+@limiter.limit("10 per minute;100 per day") 
+def submit_appeal():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error":"Data was not found during publish process"}), 404
+    
+    Id = random.randint(1000000000, 9999999999)
+    
+    story_id = data.get("story_id", "")
+    details = data.get("details", "")
+    if not story_id:
+        return jsonify({"error": "Story id was not provided"}), 404
+    if not details:
+        details = "The user believes the 'AI' mark is incorrect and wants further verification."
+        
+    story, exist = get_story_by_id(story_id)
+    if not exist:
+        return jsonify({"error": "Story was not found"}), 404
+    
+    story['appeal_id'] = Id
+    story["appeal_date"] = datetime.now(tz=timezone.utc).isoformat()
+    story['details'] = details.lower().strip()
+    
+    add_appeal(story)
+    return jsonify({"message": f"Appeal created by the user '{story['creator']}'", "appeal": story})
+
+    
+
+```
+
 
 ### Verification
 
@@ -514,7 +569,7 @@ Confirm:
 
 ---
 
-# Verification
+# User Verification
 
 For users to avoid obtaining a false allgeation on their work, they can call the "/verify" route to become a trusted member
 

@@ -93,7 +93,7 @@ async function verifyUser(){
         credentials: "include",
     })
     const data = await res.json();
-    isVerified(data.status);
+    isVerified(data.verified);
     } catch (err){
         console.error(err)
     }

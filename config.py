@@ -7,6 +7,7 @@ class Config:
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
     LLM_MODEL = "llama-3.3-70b-versatile"
     APPEAL_FILE = "logs/appeals.json"
+    AUDIT_LOG = "logs/audit_log.json"
     USERS = "logs/users.json"
     STORIES = "logs/stories.json"
     COMMON_AI_WORD_COUNT_LIMIT = (400, 800)
@@ -29,11 +30,7 @@ def add_appeal(appeal):
     appeals.append(appeal)
     with open(Config.APPEAL_FILE, 'w') as file:
         json.dump(appeals, file, indent=4)
-    
-def save_appeal(f):
-    with open(Config.APPEAL_FILE, 'w') as file:
-        json.dump(f, file, indent=4)
-        
+
         
 def get_users():
     with open(Config.USERS, 'r') as file:
@@ -96,3 +93,15 @@ def add_story(dt):
     stories.append(dt)
     with open(Config.STORIES, 'w') as file:
         json.dump(stories, file, indent=4)
+        
+        
+def get_audit_log():
+    with open(Config.AUDIT_LOG, 'r') as file:
+        return json.load(file)
+    
+def add_to_audit_log(dt):
+    log = get_audit_log()
+    log.append(dt)
+    with open(Config.AUDIT_LOG, 'w') as file:
+        json.dump(log, file, indent=4)
+    
