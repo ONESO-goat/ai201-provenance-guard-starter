@@ -1,1 +1,24 @@
-[]
+[
+    {
+        "event": "story_published",
+        "user": "joey",
+        "story_id": "827a3205-aa22-4ed7-839b-3e443347d09c",
+        "attribution": "likely_human",
+        "confidence": 0.26,
+        "timestamp": "2026-06-27T20:19:35Z"
+    },
+    {
+        "event": "story_published",
+        "user": "joey",
+        "story_id": "99291824-83c0-422c-8a5b-66751c7beaaf",
+        "attribution": "uncertain",
+        "confidence": 0.51,
+        "timestamp": "2026-06-27T20:33:01Z"
+    },
+    {
+        "event": "user_verified_toggle",
+        "user": "joey",
+        "status": true,
+        "timestamp": "2026-06-27T20:40:00Z"
+    }
+]

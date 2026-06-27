@@ -159,9 +159,11 @@ def verify():
     user_id = session.get("user_id")
     if not user_id:
         return jsonify({"error": "User id not found in session"}), 401
+    
     user, exist = get_user(user_id)
     if not exist:
         return jsonify({"error": "User not found"}), 404
+    
     if user['verified']:
         return jsonify({"message": f"{user['username']} is already verified", "verified": True}), 200
     
@@ -266,6 +268,7 @@ def submit_appeal():
     story['appeal_id'] = Id
     story["appeal_date"] = datetime.now(tz=timezone.utc).isoformat()
     story['details'] = details.lower().strip()
+    story["appeal_status"] = "Pending Review"
     
     add_appeal(story)
     

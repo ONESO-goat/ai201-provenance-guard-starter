@@ -4,7 +4,25 @@
 
 This project is a Flask-based web application that evaluates submitted text and estimates whether it was likely written by an AI or a human. The system combines multiple detection signals into a single confidence score, presents a transparent label to the user, and allows users to appeal the result for manual review.
 
+## Core Features
+* User registration and login
+* Story publishing
+* AI text analysis
+* Confidence scoring
+* Transparency labels
+* Appeals workflow
+* User verification
+* Audit logging
+* Rate limiting
+
+## Limitations
+* The detector provides an estimate, not proof of AI authorship.
+* Detection relies on brute force signals rather than a trained machine learning.
+* Very short submissions provide limited statistical information.
+* Creative writing styles (over the top text or long in length) may resemble AI generated text.
+
 ---
+
 
 # Detection Signals
 
@@ -269,6 +287,21 @@ Reason:
     structured Medium-style essays → may look AI-like
 ---
 
+# Data Storage
+
+The application stores data in JSON files.
+
+Files include:
+
+- users.json
+- stories.json
+- appeals.json
+- audit_log.json
+
+Each file is updated after relevant user actions and serves as storage during application execution.
+
+---
+
 # Rate Limiting
 
 To prevent abuse and ensure fair usage of the publishing system, this application implements rate limiting using Flask-Limiter.
@@ -359,7 +392,7 @@ This system ensures:
                            |
                            v
                 +----------------------+
-                |  Signal 3 Anqalyzer  |
+                |  Signal 3 Analyzer  |
                 |    Agent overview    |
                 +----------+-----------+
                            |
@@ -589,17 +622,115 @@ def verify():
     user_id = session.get("user_id")
     if not user_id:
         return jsonify({"error": "User id not found in session"}), 401
+    
     user, exist = get_user(user_id)
     if not exist:
         return jsonify({"error": "User not found"}), 404
     
-    if user['verified']:  user['verified'] = True
-    else: user['verified'] = False
+    if user['verified']:
+        return jsonify({"message": f"{user['username']} is already verified", "verified": True}), 200
     
-    return jsonify({"message": f"{user['username']} is now verified", "status": user['verified']}), 200
-
+    user['verified'] = True
+    save_user(user)
+    add_to_audit_log({
+        "event": "user_verified_toggle",
+        "id": user['id'],
+        "user": user['username'],
+        "status": True,
+        "timestamp": datetime.now(tz=timezone.utc)
+    })
+    return jsonify({"message": f"{user['username']} is now verified", "verified": True}), 200
+    
 
 ```
+---
+
+
+# Audit Log
+
+## Overview
+
+The system maintains an audit log to record all important actions that occur within the application. This provides a transparent, chronological history of system behavior and user activity.
+
+Unlike stored user data (accounts or stories), the audit log focuses on events, not final state.
+
+## Purpose
+
+The audit log is used to:
+
+- Track all story publishing events
+- Record classification results from the detection system
+- Log user verification changes
+- Support debugging and transparency
+- Provide a complete history for review during moderation or appeals
+- Structure
+
+Each audit log entry is stored as a JSON object containing:
+
+- event: type of system action
+- user: username performing the action
+- story_id (if applicable)
+- attribution: AI detection result (if applicable)
+- confidence: model confidence score (if applicable)
+- status (if applicable)
+- timestamp: ISO 8601 time of event
+
+### Example Audit Log
+
+```python
+[
+    {
+        "event": "story_published",
+        "user": "joey",
+        "story_id": "827a3205-aa22-4ed7-92df-86d7a4e51537",
+        "attribution": "likely_human",
+        "confidence": 0.26,
+        "timestamp": "2026-06-27T20:19:35Z"
+    },
+    {
+        "event": "story_published",
+        "user": "joey",
+        "story_id": "99291824-83c0-422c-8a5b-66751c7beaaf",
+        "attribution": "uncertain",
+        "confidence": 0.51,
+        "timestamp": "2026-06-27T20:33:01Z"
+    },
+    {
+        "event": "user_verified_toggle",
+        "user": "joey",
+        "status": true,
+        "timestamp": "2026-06-27T20:40:00Z"
+    }
+]
+```
+## Event Types
+
+The system currently logs the following event types:
+
+* Story Events
+* story_published
+* User Events
+* user_verified_toggle
+* Future Events (planned)
+* appeal_submitted
+* appeal_resolved
+* classification_updated
+* Integration with System
+
+Audit log entries are created automatically during key actions:
+
+- When a story is published → story_published
+- When a user toggles verification → user_verified_toggle
+- When classification is generated → included in publish event metadata
+
+## Why This Matters
+
+### The audit log ensures:
+
+* Full transparency of system decisions
+* Traceability of AI classification results
+* Accountability for user actions
+* Easier debugging and moderation review
 
 ---
 
@@ -637,6 +768,8 @@ The submitted text shows characteristics that are commonly found in human writin
 ```
 
 These labels clearly communicate the result while emphasizing that the detector provides an estimate rather than absolute certainty.
+
+
 
 
 # Results
