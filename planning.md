@@ -17,7 +17,7 @@ This project is a Flask-based web application that evaluates submitted text and 
 
 ## Limitations
 * The detector provides an estimate, not proof of AI authorship.
-* Detection relies on brute force signals rather than a trained machine learning.
+* Detection relies on brute force signals rather than a trained machine learning model.
 * Very short submissions provide limited statistical information.
 * Creative writing styles (over the top text or long in length) may resemble AI generated text.
 
@@ -26,7 +26,7 @@ This project is a Flask-based web application that evaluates submitted text and 
 
 # Detection Signals
 
-The detector will use two independent signals.
+The detector currently combines three signals.
 
 ## Signal 1: Repetition & Vocabulary Diversity
 
@@ -99,6 +99,54 @@ ai_writing:
 
 ---
 
+## Signal 3: Agent overview
+
+### What it tracks
+
+This signal has an agent providing an overview of the users text.
+
+Metrics include:
+
+* Notes on the structure, vocabulary, and style of the entire piece.
+* observed ranking from low to high on the repetition, structure, and predictability of the text.
+
+
+### Output
+
+JSON of the agents overview:
+
+```python
+{'vocabulary_notes': "The text features a diverse vocabulary with descriptive phrases, such as 'deep shade of twilight', 'crisp autumn breeze', and 'warm glow of an antiquarian bookshop'. There is a notable absence of repetitive words or phrases.", 
+
+'sentence_structure_notes': 'The sentence structure is varied, with a mix of short and long sentences that create a sense of rhythm and flow. The use of descriptive passages and dialogue adds to the dynamic nature of the structure.', 
+
+'stylistic_notes': "The text is rich in stylistic features, including personal experience, specificity, and detailed phrasing. The author's use of sensory details, such as the 'scent of old paper and roasted coffee beans', creates a vivid and immersive atmosphere.", 
+
+'observed_signals': {'repetition_low_high': 'low', 
+                    'structure_uniformity_low_high': 'high', 
+                    'predictability_low_high': 'high'}}
+```
+
+### Examples:
+
+human_writing:
+
+```python
+'observed_signals': {'repetition_low_high': 'low', 
+                    'structure_uniformity_low_high': 'low', 
+                    'predictability_low_high': 'medium'}
+```
+
+ai_writing:
+
+```python
+'observed_signals': {'repetition_low_high': 'high', 
+                    'structure_uniformity_low_high': 'high', 
+                    'predictability_low_high': 'high'}
+```
+
+---
+
 ## Combining Signals
 
 Each signal contributes equally.
@@ -117,10 +165,12 @@ Signal 1 = 0.80
 
 Signal 2 = 0.60
 
+Signal 3 => low-medium-medium => 0.35-0.40 (after reduction)
+
 Final confidence:
 
-```
-(0.80 × 0.5) + (0.60 × 0.5) = 0.70
+```python
+confidence = float(min(signals_result['score'] + ai_result['score'], 1.0))
 ```
 
 The confidence score always ranges from **0.0–1.0**.
@@ -135,8 +185,8 @@ Interpretation:
 
 | Score     | Meaning      |
 | --------- | ------------ |
-| 0.00–0.39 | Likely Human |
-| 0.40–0.69 | Uncertain    |
+| 0.00–0.49 | Likely Human |
+| 0.5–0.69 | Uncertain    |
 | 0.70–1.00 | Likely AI    |
 
 ### Meaning of 0.60
@@ -280,7 +330,7 @@ Editing increases vocabulary diversity and sentence variation, making the detect
 
 ## Edge Case 4
 
-Longer text, which means more repeats - more editing - and more content.
+Longer narrative text naturally contains repeated names, phrases, and sentence structures, which may increase the repetition score despite being human created.
 
 Reason:
     long narrative fiction → may inflate AI-likeness
@@ -781,3 +831,7 @@ SEQUENCE SCORES:
         - AI -0.1
 
 FINAL SCORE: 0.23643327829458052
+
+## Note
+
+The agent got -0.1 as it returned **low** for all the observed overviews, it was hit with a **35-50%** reduction inside the **'def three()'** Signal function. I do admit that the logic is pretty flawed, but I added it as a "mercy" gimmick as signal 1 and signal 2 can provide unfair or rigged scores as both can be altered drastically just due the text format or length.

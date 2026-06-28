@@ -122,8 +122,8 @@ cd a
 
 | Confidence | Result |
 |------------|--------|
-| 0.00–0.39 | Likely Human |
-| 0.40–0.69 | Uncertain |
+| 0.00–0.49 | Likely Human |
+| 0.50–0.69 | Uncertain |
 | 0.70–1.00 | Likely AI |
 
 These thresholds were intentionally chosen to reduce false positives.
@@ -201,7 +201,7 @@ Each response contains:
 
 ## Example 1
 
-Human-written story
+Human written story
 
 ```
 Signal 1: 0.647
@@ -226,7 +226,7 @@ Mixed characteristics
 ```
 Signal 1: 0.52
 Signal 2: 0.49
-Signal 3: Medium
+Signal 3: medium/medium/medium
 
 Final Confidence:
 
@@ -366,6 +366,7 @@ Examples of difficult content include:
 - technical documentation
 - heavily edited AI-generated writing
 - long-form narrative fiction
+- messy scoring system in signal 3
 
 These writing styles may resemble AI according to one or more signals while still being entirely human made.
 
@@ -377,7 +378,7 @@ For this reason, the application includes an **uncertain** category and supports
 
 During development, the implementation diverged from the original design in one significant way.
 
-The initial plan described a two-signal detector based entirely on statistical analysis. After implementation, a third signal was added using an AI agent to evaluate the overall writing style. Rather than replacing the original signals, it serves as an additional source of evidence that is combined with the statistical measures.
+The initial plan described a two-signal detector based entirely on analysis. During implementation, a third signal was added using an AI agent to overview the overall text. Rather than replacing the original signals, it serves as an additional source of evidence that is combined with the statistical measures.
 
 The project also expanded beyond the original requirements by adding:
 
@@ -392,7 +393,7 @@ These additions improved transparency and made the application more representati
 
 # AI Usage
 
-AI tools were used as development assistants rather than as automatic code generators.
+AI tools were used as development assistants and as a reviewer on the logic.
 
 ## Example 1
 
@@ -409,7 +410,7 @@ I then modified the generated code to:
 
 ## Example 2
 
-Used chatGPT with the documation to assure requirements were being meant, and fixing the structure.
+Used chatGPT to aid with the documentation to assure requirements were being meant, and fixing the pverall structure of the project.
 
 Rather than using the suggested implementation directly, I revised:
 
@@ -431,6 +432,7 @@ to better match the needs of the application and the project rubric.
 - HTML
 - CSS
 - JavaScript
+- Git
 
 ---
 
