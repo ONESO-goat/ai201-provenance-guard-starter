@@ -119,7 +119,7 @@ def make_account():
         "username": username,
         "joined": date,
         "stories": []
-    })
+    }, new_user=True)
     session['user_id'] = Id
     
     add_to_audit_log({
