@@ -44,7 +44,7 @@ def ratelimit_handler(e):
     
 @app.route("/dashboard", methods=["GET"])
 def dashboard():
-    stories = get_all_stories()  # assumes you already have this from add_story storage
+    stories = get_all_stories()
 
     if not stories:
         return jsonify({
