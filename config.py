@@ -74,9 +74,11 @@ def save_user(data, new_user=False):
                 found = True
                 break
                 
-        if not found :
+        if not found:
             return
-    
+    if new_user:
+        users.append(data)
+        
     with open(Config.USERS, 'w') as file:
         json.dump(users, file, indent=4)
         

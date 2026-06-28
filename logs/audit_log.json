@@ -143,5 +143,11 @@
         "details": "the user believes the 'ai' mark is incorrect and wants further verification.",
         "appeal_status": "Pending Review",
         "event": "appeal_submitted"
+    },
+    {
+        "event": "new_user",
+        "id": "cfc2e619-5626-4712-83c3-925085920a03",
+        "user": "test",
+        "timestamp": "2026-06-28T16:02:17.972562+00:00"
     }
 ]
